@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/i18n/app_translations.dart';
+import 'package:aarb_citizen_app/features/reports/models/report_item.dart';
 
 class ReportSuccessScreen extends StatelessWidget {
-  const ReportSuccessScreen({super.key});
+  final ReportItem? report;
+
+  const ReportSuccessScreen({super.key, this.report});
 
   @override
   Widget build(BuildContext context) {
+    final item = report ??
+        const ReportItem(
+          id: '#AARB-2026-04390',
+          title: 'Employee Misconduct',
+          category: 'Employee Misconduct',
+          status: 'Submitted',
+          date: 'June 19, 2026 — 9:41 AM',
+          description: '',
+          location: 'Bole Sub-City, Addis Ababa, Ethiopia',
+        );
+
+    final reportId = item.id.startsWith('#') ? item.id : '#${item.id}';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -73,9 +90,9 @@ class ReportSuccessScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Title & Subtitle
-              const Text(
-                'Report Submitted!',
-                style: TextStyle(
+              Text(
+                AppTranslations.tr('report_submitted'),
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
@@ -83,10 +100,10 @@ class ReportSuccessScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Thank you for helping keep\nAddis Ababa safe & compliant.',
+              Text(
+                AppTranslations.tr('thank_you'),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                   height: 1.4,
@@ -116,9 +133,9 @@ class ReportSuccessScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'REPORT ID',
-                          style: TextStyle(
+                        Text(
+                          AppTranslations.tr('report_id'),
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textMuted,
@@ -131,9 +148,9 @@ class ReportSuccessScreen extends StatelessWidget {
                             color: AppColors.successBg,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            'Submitted',
-                            style: TextStyle(
+                          child: Text(
+                            AppTranslations.tr('submitted'),
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: AppColors.successText,
@@ -143,9 +160,9 @@ class ReportSuccessScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      '#AARB-2026-04390',
-                      style: TextStyle(
+                    Text(
+                      reportId,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppColors.text,
@@ -157,22 +174,22 @@ class ReportSuccessScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     _buildTicketRow(
                       icon: Icons.location_on_outlined,
-                      text: 'Bole Sub-City, Addis Ababa, Ethiopia',
+                      text: item.location,
                     ),
                     const SizedBox(height: 10),
                     _buildTicketRow(
                       icon: Icons.access_time_rounded,
-                      text: 'Submitted June 19, 2026 — 9:41 AM',
+                      text: 'Submitted: ${item.date}',
                     ),
                     const SizedBox(height: 10),
                     _buildTicketRow(
                       icon: Icons.shield_outlined,
-                      text: 'Assigned to Bole Sub-City Unit',
+                      text: item.assignedUnit,
                     ),
                     const SizedBox(height: 10),
                     _buildTicketRow(
                       icon: Icons.phone_outlined,
-                      text: 'Call 8688 Bureau Hotline / 911',
+                      text: 'Hotline 8688 / 911',
                       isAction: true,
                     ),
                   ],
@@ -187,15 +204,15 @@ class ReportSuccessScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Report Reference #AARB-2026-04390 copied to clipboard!'),
+                      SnackBar(
+                        content: Text('Report Reference $reportId copied to clipboard!'),
                       ),
                     );
                   },
                   icon: const Icon(Icons.share_outlined, size: 20),
-                  label: const Text(
-                    'Share Report',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  label: Text(
+                    AppTranslations.tr('share_report'),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -210,9 +227,9 @@ class ReportSuccessScreen extends StatelessWidget {
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () => context.go('/home'),
-                child: const Text(
-                  'Return to Home',
-                  style: TextStyle(
+                child: Text(
+                  AppTranslations.tr('return_home'),
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primary,

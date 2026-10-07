@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../reports/models/report_item.dart';
+import '../../../../core/i18n/app_translations.dart';
+import '../../../../core/services/api_service.dart';
+import 'package:aarb_citizen_app/features/reports/models/report_item.dart';
 
 class TrackReportScreen extends StatefulWidget {
   final String? initialId;
@@ -13,8 +15,11 @@ class TrackReportScreen extends StatefulWidget {
 }
 
 class _TrackReportScreenState extends State<TrackReportScreen> {
+  final ApiService _api = ApiService();
   late TextEditingController _controller;
   ReportItem? _currentReport;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -30,15 +35,26 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
     super.dispose();
   }
 
-  void _lookupReport(String id) {
-    final normalized = id.trim().toUpperCase();
-    final match = ReportItem.sampleReports.firstWhere(
-      (r) => r.id.toUpperCase() == normalized,
-      orElse: () => ReportItem.sampleReports.first,
-    );
+  Future<void> _lookupReport(String id) async {
+    final clean = id.trim();
+    if (clean.isEmpty) return;
+
     setState(() {
-      _currentReport = match;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    final found = await _api.trackReport(clean);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (found != null) {
+          _currentReport = found;
+        } else {
+          _errorMessage = 'Report reference "$clean" not found. Check and try again.';
+        }
+      });
+    }
   }
 
   @override
@@ -82,18 +98,18 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Track my report',
-                        style: TextStyle(
+                        AppTranslations.tr('track_my_report'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.text,
                         ),
                       ),
                       Text(
-                        'Enter your case reference number',
-                        style: TextStyle(
+                        AppTranslations.tr('enter_case_ref'),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -115,9 +131,9 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'CASE REFERENCE NUMBER',
-                      style: TextStyle(
+                    Text(
+                      AppTranslations.tr('case_ref_number'),
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,
@@ -163,7 +179,7 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                         SizedBox(
                           height: 46,
                           child: ElevatedButton(
-                            onPressed: () => _lookupReport(_controller.text),
+                            onPressed: _isLoading ? null : () => _lookupReport(_controller.text),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
@@ -173,13 +189,19 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                             ),
-                            child: const Text(
-                              'Check Status',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Text(
+                                    AppTranslations.tr('check_status'),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -195,6 +217,13 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                   ],
                 ),
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Result Overview Card
@@ -249,7 +278,7 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Submitted: 2024-08-12 09:30',
+                      'Submitted: ${report.date}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -271,9 +300,9 @@ class _TrackReportScreenState extends State<TrackReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'STATUS TIMELINE',
-                      style: TextStyle(
+                    Text(
+                      AppTranslations.tr('status_timeline'),
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,

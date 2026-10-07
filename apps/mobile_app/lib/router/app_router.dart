@@ -10,6 +10,7 @@ import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/reports/presentation/screens/create_report_screen.dart';
 import '../features/reports/presentation/screens/report_success_screen.dart';
 import '../features/track/presentation/screens/track_report_screen.dart';
+import 'package:aarb_citizen_app/features/reports/models/report_item.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -70,7 +71,9 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/report-success',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const ReportSuccessScreen(),
+      builder: (context, state) => ReportSuccessScreen(
+        report: state.extra as ReportItem?,
+      ),
     ),
     GoRoute(
       path: '/track-report',

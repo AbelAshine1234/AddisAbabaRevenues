@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/config/app_config.dart';
+import 'core/i18n/app_translations.dart';
 import 'router/app_router.dart';
 
 void main() {
@@ -19,11 +20,16 @@ class AarbCitizenApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'AARB Citizen App',
-      debugShowCheckedModeBanner: false,
-      theme: AppConfig.theme,
-      routerConfig: appRouter,
+    return ValueListenableBuilder<String>(
+      valueListenable: AppTranslations.currentLocale,
+      builder: (context, locale, _) {
+        return MaterialApp.router(
+          title: 'AARB Citizen App',
+          debugShowCheckedModeBanner: false,
+          theme: AppConfig.theme,
+          routerConfig: appRouter,
+        );
+      },
     );
   }
 }

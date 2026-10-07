@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/i18n/app_translations.dart';
+import '../../../../core/services/api_service.dart';
 
 class ChatMessage {
   final String text;
   final bool isUser;
   final String time;
+  final List<String> citations;
 
   const ChatMessage({
     required this.text,
     required this.isUser,
     required this.time,
+    this.citations = const [],
   });
 }
 
@@ -21,15 +25,16 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final ApiService _api = ApiService();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   final List<ChatMessage> _messages = [];
-
-  final List<String> _quickPrompts = [
+  bool _isGenerating = false;
+  List<String> _dynamicSuggestions = [
     'How do I report VAT evasion anonymously?',
+    'ቫት ደረሰኝ ካልሰጡኝ ምን ማድረግ አለብኝ?',
     'What evidence is needed for fake receipts?',
-    'How is my identity protected?',
     'What happens after I submit a report?',
   ];
 
@@ -40,15 +45,16 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _sendMessage([String? presetText]) {
+  Future<void> _sendMessage([String? presetText]) async {
     final text = (presetText ?? _textController.text).trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isGenerating) return;
 
     final now = TimeOfDay.now();
     final timeStr = '${now.hour}:${now.minute.toString().padLeft(2, '0')}';
 
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true, time: timeStr));
+      _isGenerating = true;
       if (presetText == null) {
         _textController.clear();
       }
@@ -56,27 +62,29 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _scrollToBottom();
 
-    // AI automated response
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      String reply;
-      final lower = text.toLowerCase();
+    // Call live RAG backend endpoint
+    final response = await _api.sendChatMessage(text);
+    final replyText = response['reply'] ?? 'Received your report inquiry.';
+    final suggestions = List<String>.from(response['suggestions'] ?? []);
+    final citations = List<String>.from(response['citations'] ?? []);
 
-      if (lower.contains('vat') || lower.contains('receipt') || lower.contains('fake')) {
-        reply = 'You can report VAT non-compliance or fake receipts under the "Create Report" (+) tab. Please attach clear photos of the receipt, voucher, or storefront. All reports can be submitted 100% anonymously.';
-      } else if (lower.contains('anonymous') || lower.contains('protect') || lower.contains('identity')) {
-        reply = 'Your safety and confidentiality are fully protected under Addis Ababa City Administration whistleblowing regulations. Toggling "Report anonymously" strips all device identifiers and personal credentials.';
-      } else if (lower.contains('track') || lower.contains('status')) {
-        reply = 'You can track any active case using your reference number (e.g. ARB-2024-00142) under the "Track My Report" option on the Home screen.';
-      } else {
-        reply = 'I have received your inquiry. As the AARB Report Assistant AI, I can help you file reports on VAT evasion, employee bribery/misconduct, or illegal businesses. You can also dial 8688 for immediate assistance.';
-      }
-
+    if (mounted) {
       setState(() {
-        _messages.add(ChatMessage(text: reply, isUser: false, time: timeStr));
+        _isGenerating = false;
+        _messages.add(
+          ChatMessage(
+            text: replyText,
+            isUser: false,
+            time: timeStr,
+            citations: citations,
+          ),
+        );
+        if (suggestions.isNotEmpty) {
+          _dynamicSuggestions = suggestions;
+        }
       });
       _scrollToBottom();
-    });
+    }
   }
 
   void _scrollToBottom() {
@@ -119,18 +127,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Chat',
-                        style: TextStyle(
+                        AppTranslations.tr('chat'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.text,
                         ),
                       ),
                       Text(
-                        'Message with assistant',
-                        style: TextStyle(
+                        AppTranslations.tr('message_assistant'),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -149,8 +157,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      itemCount: _messages.length,
+                      itemCount: _messages.length + (_isGenerating ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index == _messages.length && _isGenerating) {
+                          return _buildTypingIndicator();
+                        }
                         final msg = _messages[index];
                         return _buildChatBubble(msg);
                       },
@@ -170,18 +181,18 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Column(
         children: [
-          const Text(
-            '👋 Hey there!',
-            style: TextStyle(
+          Text(
+            AppTranslations.tr('hey_there'),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
               color: AppColors.text,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'How can I help you?',
-            style: TextStyle(
+          Text(
+            AppTranslations.tr('how_can_i_help'),
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppColors.text,
@@ -189,9 +200,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'I’m your Report Assistant AI',
-            style: TextStyle(
+          Text(
+            AppTranslations.tr('assistant_ai'),
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
@@ -199,20 +210,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(height: 36),
           // Suggested prompts
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'COMMON QUESTIONS',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._quickPrompts.map(
+          ..._dynamicSuggestions.map(
             (p) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: InkWell(
@@ -264,9 +262,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return Align(
       alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.82,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -286,9 +284,32 @@ class _ChatScreenState extends State<ChatScreen> {
               style: TextStyle(
                 fontSize: 14,
                 color: msg.isUser ? Colors.white : AppColors.text,
-                height: 1.35,
+                height: 1.4,
               ),
             ),
+            if (!msg.isUser && msg.citations.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: msg.citations.map((c) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '⚖️ $c',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 4),
             Text(
               msg.time,
@@ -298,6 +319,36 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? Colors.white.withValues(alpha: 0.7)
                     : AppColors.textMuted,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'AARB AI analyzing knowledge base...',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -326,9 +377,9 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: TextField(
                   controller: _textController,
-                  decoration: const InputDecoration(
-                    hintText: 'Type something...',
-                    hintStyle: TextStyle(
+                  decoration: InputDecoration(
+                    hintText: AppTranslations.tr('type_something'),
+                    hintStyle: const TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 14,
                     ),

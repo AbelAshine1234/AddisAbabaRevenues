@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/i18n/app_translations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,7 +10,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String _selectedLanguage = 'English';
   bool _pushNotifications = true;
 
   @override
@@ -22,9 +22,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Profile & Settings',
-                style: TextStyle(
+              Text(
+                AppTranslations.tr('profile'),
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
@@ -61,8 +61,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             'Citizen Taxpayer',
                             style: TextStyle(
                               fontSize: 16,
@@ -70,10 +70,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppColors.text,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Anonymous Reporting Mode',
-                            style: TextStyle(
+                            AppTranslations.tr('name_not_visible'),
+                            style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                             ),
@@ -102,9 +102,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
 
               // Section: Language
-              const Text(
-                'PREFERENCES',
-                style: TextStyle(
+              Text(
+                AppTranslations.tr('preferences'),
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textMuted,
@@ -120,20 +120,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    _buildLanguageTile('English', 'English'),
+                    _buildLanguageTile('en', 'English'),
                     const Divider(color: AppColors.borderLight, height: 1),
-                    _buildLanguageTile('Amharic', 'አማርኛ (Amharic)'),
+                    _buildLanguageTile('am', 'አማርኛ (Amharic)'),
                     const Divider(color: AppColors.borderLight, height: 1),
-                    _buildLanguageTile('Oromo', 'Afaan Oromoo'),
+                    _buildLanguageTile('om', 'Afaan Oromoo'),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
 
               // Section: Notifications & Privacy
-              const Text(
-                'SECURITY & PRIVACY',
-                style: TextStyle(
+              Text(
+                AppTranslations.tr('security_privacy'),
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textMuted,
@@ -151,7 +151,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     ListTile(
                       leading: const Icon(Icons.notifications_none_rounded, color: AppColors.primary),
-                      title: const Text('Push Notifications', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      title: Text(
+                        AppTranslations.tr('push_notifications'),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
                       trailing: Switch(
                         value: _pushNotifications,
                         activeThumbColor: AppColors.primary,
@@ -161,16 +164,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Divider(color: AppColors.borderLight, height: 1),
                     ListTile(
                       leading: const Icon(Icons.security_rounded, color: AppColors.primary),
-                      title: const Text('Whistleblower Protection Policy', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      title: Text(
+                        AppTranslations.tr('whistleblower_policy'),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
                       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
                       onTap: () {
                         showDialog(
                           context: context,
                           builder: (ctx) => AlertDialog(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: const Text('Legal Protection'),
+                            title: Text(AppTranslations.tr('whistleblower_policy')),
                             content: const Text(
-                              'Whistleblowers reporting tax evasion and corruption to the Addis Ababa Revenues Bureau are legally protected under proclamation against retaliation or disclosure of identity.',
+                              'Whistleblowers reporting tax evasion, fraud, and corruption to the Addis Ababa Revenues Bureau are legally protected against retaliation, identity exposure, or employer termination under Proclamation No. 983/2016.',
                             ),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Understood')),
@@ -195,17 +201,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Official Agency Contact',
-                      style: TextStyle(
+                      AppTranslations.tr('official_contact'),
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
+                    const SizedBox(height: 4),
+                    const Text(
                       'Addis Ababa City Administration Revenues Bureau\nHotline: 8688 | Emergency: 911',
                       style: TextStyle(
                         fontSize: 12,
@@ -234,8 +240,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLanguageTile(String langKey, String title) {
-    final isSelected = _selectedLanguage == langKey;
+  Widget _buildLanguageTile(String langCode, String title) {
+    final isSelected = AppTranslations.lang == langCode;
     return ListTile(
       title: Text(
         title,
@@ -249,7 +255,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
           : null,
       onTap: () {
-        setState(() => _selectedLanguage = langKey);
+        AppTranslations.setLocale(langCode);
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Language switched to $title')),
         );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../models/report_item.dart';
+import '../../../../core/i18n/app_translations.dart';
+import '../../../../core/services/api_service.dart';
+import 'package:aarb_citizen_app/features/reports/models/report_item.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -11,22 +13,32 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
+  final ApiService _api = ApiService();
   String _selectedFilter = 'All';
+  bool _isLoading = true;
+  List<ReportItem> _reports = [];
 
   final List<String> _filters = ['All', 'Under Review', 'Assigned', 'Resolved'];
 
   @override
-  Widget build(BuildContext context) {
-    final allReports = ReportItem.sampleReports;
-    final filtered = _selectedFilter == 'All'
-        ? allReports
-        : allReports.where((r) {
-            if (_selectedFilter == 'Assigned') {
-              return r.status.contains('Assigned');
-            }
-            return r.status.toLowerCase() == _selectedFilter.toLowerCase();
-          }).toList();
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
 
+  Future<void> _loadReports() async {
+    setState(() => _isLoading = true);
+    final list = await _api.fetchReports(category: _selectedFilter);
+    if (mounted) {
+      setState(() {
+        _reports = list;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -55,9 +67,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Text(
-                    'Reports',
-                    style: TextStyle(
+                  Text(
+                    AppTranslations.tr('reports'),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.text,
@@ -79,7 +91,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   final filter = _filters[index];
                   final isSelected = _selectedFilter == filter;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedFilter = filter),
+                    onTap: () {
+                      setState(() => _selectedFilter = filter);
+                      _loadReports();
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       alignment: Alignment.center,
@@ -107,14 +122,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
             // Reports List
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 90),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final item = filtered[index];
-                  return _buildReportCard(context, item);
-                },
+              child: RefreshIndicator(
+                onRefresh: _loadReports,
+                color: AppColors.primary,
+                child: _isLoading && _reports.isEmpty
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      )
+                    : ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 90),
+                        itemCount: _reports.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = _reports[index];
+                          return _buildReportCard(context, item);
+                        },
+                      ),
               ),
             ),
           ],

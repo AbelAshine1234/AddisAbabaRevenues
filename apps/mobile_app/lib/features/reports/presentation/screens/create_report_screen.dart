@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/i18n/app_translations.dart';
+import '../../../../core/services/api_service.dart';
 
 class CreateReportScreen extends StatefulWidget {
   const CreateReportScreen({super.key});
@@ -10,8 +12,10 @@ class CreateReportScreen extends StatefulWidget {
 }
 
 class _CreateReportScreenState extends State<CreateReportScreen> {
+  final ApiService _api = ApiService();
   String _selectedCategory = 'Employee Misconduct';
   bool _isAnonymous = true;
+  bool _isSubmitting = false;
   final TextEditingController _descController = TextEditingController();
 
   final List<String> _categories = [
@@ -28,8 +32,28 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     super.dispose();
   }
 
-  void _submitReport() {
-    context.pushReplacement('/report-success');
+  Future<void> _submitReport() async {
+    final desc = _descController.text.trim();
+    if (desc.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please provide a brief description.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    final report = await _api.createReport(
+      category: _selectedCategory,
+      description: desc,
+      subcity: 'Bole Sub-City, Addis Ababa, Ethiopia',
+      isAnonymous: _isAnonymous,
+    );
+
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      context.pushReplacement('/report-success', extra: report);
+    }
   }
 
   @override
@@ -69,18 +93,18 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Select Report Category',
-                        style: TextStyle(
+                        AppTranslations.tr('select_category'),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.text,
                         ),
                       ),
                       Text(
-                        'Choose the type of issue you are reporting',
-                        style: TextStyle(
+                        AppTranslations.tr('choose_type'),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -104,9 +128,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     const SizedBox(height: 24),
 
                     // Incident Type Section
-                    const Text(
-                      'Incident Type',
-                      style: TextStyle(
+                    Text(
+                      AppTranslations.tr('incident_type'),
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.text,
@@ -148,9 +172,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     const SizedBox(height: 20),
 
                     // Description Section
-                    const Text(
-                      'Description',
-                      style: TextStyle(
+                    Text(
+                      AppTranslations.tr('description'),
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.text,
@@ -166,16 +190,16 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       child: TextField(
                         controller: _descController,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                          hintText: 'Describe what happened...',
-                          hintStyle: TextStyle(
+                        decoration: InputDecoration(
+                          hintText: AppTranslations.tr('describe_happened'),
+                          hintStyle: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textMuted,
                           ),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.all(14),
+                          contentPadding: const EdgeInsets.all(14),
                         ),
                       ),
                     ),
@@ -184,18 +208,18 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     // Current Location Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
-                          'Current Location',
-                          style: TextStyle(
+                          AppTranslations.tr('current_location'),
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,
                           ),
                         ),
                         Text(
-                          'Change',
-                          style: TextStyle(
+                          AppTranslations.tr('change'),
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,
@@ -215,19 +239,19 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
-                                'Report anonymously',
-                                style: TextStyle(
+                                AppTranslations.tr('report_anonymously'),
+                                style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.text,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Your name won’t be visible to others',
-                                style: TextStyle(
+                                AppTranslations.tr('name_not_visible'),
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                 ),
@@ -251,7 +275,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _submitReport,
+                        onPressed: _isSubmitting ? null : _submitReport,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -261,13 +285,19 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                           ),
                           shadowColor: AppColors.primary.withValues(alpha: 0.35),
                         ),
-                        child: const Text(
-                          'Submit Report',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : Text(
+                                AppTranslations.tr('submit_report'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -309,18 +339,18 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Tap to add files, photos and videos',
-            style: TextStyle(
+          Text(
+            AppTranslations.tr('tap_add_files'),
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.text,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Up to 4 attaches',
-            style: TextStyle(
+          Text(
+            AppTranslations.tr('up_to_4'),
+            style: const TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,
             ),
@@ -330,7 +360,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Slot 1 (Add action)
               Container(
                 width: 48,
                 height: 48,
@@ -349,7 +378,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Slot 2, 3, 4 (Placeholders)
               ...List.generate(
                 3,
                 (index) => Container(
@@ -439,7 +467,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Street lines
           Positioned(
             left: 0,
             right: 0,
@@ -452,7 +479,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             left: 140,
             child: Container(width: 18, color: const Color(0xFFD3E2C6)),
           ),
-          // Street names
           const Positioned(
             top: 36,
             left: 165,
@@ -476,7 +502,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               ),
             ),
           ),
-          // Location pin
           Positioned(
             top: 40,
             left: 136,

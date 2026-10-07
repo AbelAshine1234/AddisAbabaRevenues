@@ -1,105 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../reports/models/report_item.dart';
+import '../../../../core/i18n/app_translations.dart';
+import '../../../../core/services/api_service.dart';
+import 'package:aarb_citizen_app/features/reports/models/report_item.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final recentReports = ReportItem.sampleReports.take(4).toList();
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  final ApiService _api = ApiService();
+  bool _isLoading = true;
+  Map<String, dynamic> _stats = {
+    'reportsThisMonth': 1284,
+    'avgResponseHours': 1.8,
+    'trendVsLastMonthPercentage': 8,
+    'avgResponseImprovementMinutes': 14,
+  };
+  List<ReportItem> _recentReports = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final stats = await _api.fetchStats();
+    final reports = await _api.fetchReports();
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _recentReports = reports.take(4).toList();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
           SafeArea(
             bottom: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // App Header
-                  _buildHeader(context),
-                  const SizedBox(height: 20),
+            child: RefreshIndicator(
+              onRefresh: _loadData,
+              color: AppColors.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // App Header
+                    _buildHeader(context),
+                    const SizedBox(height: 20),
 
-                  // Impact Stats Section
-                  const Text(
-                    'Impact Stats',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildImpactStats(),
-                  const SizedBox(height: 20),
-
-                  // Action Banners
-                  _buildActionBanner(
-                    context,
-                    isPrimary: true,
-                    title: 'Report Incident',
-                    subtitle: '12 types available',
-                    onTap: () => context.push('/create-report'),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionBanner(
-                    context,
-                    isPrimary: false,
-                    title: 'Track My Report',
-                    subtitle: 'Enter your case reference number',
-                    onTap: () => context.push('/track-report'),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Recent Reports Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Recent Reports',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
+                    // Impact Stats Section
+                    Text(
+                      AppTranslations.tr('impact_stats'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text,
                       ),
-                      GestureDetector(
-                        onTap: () => context.go('/reports'),
-                        child: const Text(
-                          'View All',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImpactStats(),
+                    const SizedBox(height: 20),
+
+                    // Action Banners
+                    _buildActionBanner(
+                      context,
+                      isPrimary: true,
+                      title: AppTranslations.tr('report_incident'),
+                      subtitle: AppTranslations.tr('types_available'),
+                      onTap: () => context.push('/create-report'),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildActionBanner(
+                      context,
+                      isPrimary: false,
+                      title: AppTranslations.tr('track_my_report'),
+                      subtitle: AppTranslations.tr('enter_case_ref'),
+                      onTap: () => context.push('/track-report'),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Recent Reports Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppTranslations.tr('recent_reports'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () => context.go('/reports'),
+                          child: Text(
+                            AppTranslations.tr('view_all'),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
 
-                  // Recent Reports List
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: recentReports.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = recentReports[index];
-                      return _buildReportCard(context, item);
-                    },
-                  ),
-                ],
+                    // Recent Reports List
+                    if (_isLoading && _recentReports.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _recentReports.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = _recentReports[index];
+                          return _buildReportCard(context, item);
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
 
-          // Floating Hotline Action Button (bottom right)
+          // Floating Hotline Action Button
           Positioned(
             right: 20,
             bottom: 20,
@@ -111,9 +158,9 @@ class HomeScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    title: const Text('AARB Hotline Support'),
+                    title: Text(AppTranslations.tr('official_contact')),
                     content: const Text(
-                      'Call Addis Ababa Revenues Bureau direct compliance hotline 8688 or city emergency at 911.',
+                      'Addis Ababa Revenues Bureau Hotline: 8688\nCity Emergency: 911',
                     ),
                     actions: [
                       TextButton(
@@ -167,17 +214,17 @@ class HomeScreen extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Good morning',
-              style: TextStyle(
+            Text(
+              AppTranslations.tr('good_morning'),
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 2),
-            const Text(
-              'AARB',
-              style: TextStyle(
+            Text(
+              AppTranslations.tr('agency_code'),
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: AppColors.text,
@@ -251,6 +298,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildImpactStats() {
+    final count = _stats['reportsThisMonth']?.toString() ?? '1,284';
+    final avgHours = _stats['avgResponseHours']?.toString() ?? '1.8';
+    final trend = _stats['trendVsLastMonthPercentage']?.toString() ?? '8';
+    final impMin = _stats['avgResponseImprovementMinutes']?.toString() ?? '14';
+
     return Row(
       children: [
         // Card 1
@@ -265,9 +317,9 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '1,284',
-                  style: TextStyle(
+                Text(
+                  count,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.text,
@@ -275,9 +327,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Reports This Month',
-                  style: TextStyle(
+                Text(
+                  AppTranslations.tr('reports_this_month'),
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,
                   ),
@@ -289,9 +341,9 @@ class HomeScreen extends StatelessWidget {
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    '↑ 8% vs last month',
-                    style: TextStyle(
+                  child: Text(
+                    '↑ $trend% ${AppTranslations.tr('vs_last_month')}',
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -315,9 +367,9 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '1.8h',
-                  style: TextStyle(
+                Text(
+                  '${avgHours}h',
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.text,
@@ -325,9 +377,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Avg Response Time',
-                  style: TextStyle(
+                Text(
+                  AppTranslations.tr('avg_response_time'),
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary,
                   ),
@@ -339,9 +391,9 @@ class HomeScreen extends StatelessWidget {
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    '↓ 14 min improvement',
-                    style: TextStyle(
+                  child: Text(
+                    '↓ $impMin min ${AppTranslations.tr('improvement')}',
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -447,22 +499,15 @@ class HomeScreen extends StatelessWidget {
     Color badgeBg;
     Color badgeTextColor;
 
-    switch (item.status) {
-      case 'Under Review':
-        badgeBg = AppColors.warningBg;
-        badgeTextColor = AppColors.warningText;
-        break;
-      case 'Assigned to Investigator':
-        badgeBg = AppColors.successBg;
-        badgeTextColor = AppColors.successText;
-        break;
-      case 'Resolved':
-        badgeBg = const Color(0xFFFEE2E2);
-        badgeTextColor = const Color(0xFFDC2626);
-        break;
-      default:
-        badgeBg = AppColors.infoBg;
-        badgeTextColor = AppColors.infoText;
+    if (item.status.contains('Assigned')) {
+      badgeBg = AppColors.successBg;
+      badgeTextColor = AppColors.successText;
+    } else if (item.status.contains('Resolved')) {
+      badgeBg = const Color(0xFFFEE2E2);
+      badgeTextColor = const Color(0xFFDC2626);
+    } else {
+      badgeBg = AppColors.warningBg;
+      badgeTextColor = AppColors.warningText;
     }
 
     return GestureDetector(
