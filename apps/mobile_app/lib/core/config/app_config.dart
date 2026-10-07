@@ -8,7 +8,7 @@ class AppConfig {
   static const String agencyNameAm = 'የአዲስ አበባ ከተማ አስተዳደር ገቢዎች ቢሮ';
   static const String agencyNameOm = 'Biiroo Galiiwwanii Bulchiinsa Magaalaa Finfinnee';
 
-  static const String defaultApiUrl = 'http://10.0.2.2:5001/api';
+  static const String defaultApiUrl = 'http://192.168.1.27:5001/api';
   static const String hotline = '8688';
 
   static String get apiUrl {
