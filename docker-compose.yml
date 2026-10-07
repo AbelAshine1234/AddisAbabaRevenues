@@ -1,0 +1,58 @@
+services:
+  aarb-postgres:
+    image: postgres:16-alpine
+    container_name: aarb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aarb_user
+      POSTGRES_PASSWORD: aarb_password_secure
+      POSTGRES_DB: aarb_revenues_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - aarb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aarb_user -d aarb_revenues_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  aarb-redis:
+    image: redis:7-alpine
+    container_name: aarb-redis
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - aarb_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: aarb-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PORT=5000
+      - DB_HOST=aarb-postgres
+      - DB_PORT=5432
+      - REDIS_HOST=aarb-redis
+      - REDIS_PORT=6379
+    ports:
+      - "5001:5000"
+    depends_on:
+      aarb-postgres:
+        condition: service_healthy
+      aarb-redis:
+        condition: service_healthy
+
+volumes:
+  aarb_pgdata:
+  aarb_redisdata:
